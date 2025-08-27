@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscriber Analysis - Calo Balance Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .risk-low { color: #28a745; }
+        .risk-medium { color: #ffc107; }
+        .risk-high { color: #dc3545; }
+        
+        .stability-stable { color: #28a745; }
+        .stability-moderate { color: #ffc107; }
+        .stability-volatile { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>
+                Calo Balance Analyzer
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">Dashboard</a>
+                <a class="nav-link" href="/">Upload New File</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-users me-2"></i>Subscriber Analysis</h1>
+            <span class="badge bg-primary fs-6">{{ subscriber_analysis|length }} Subscribers</span>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h3 class="text-warning">
+                            {{ subscriber_analysis.values() | selectattr('risk_score', 'gt', 70) | list | length }}
+                        </h3>
+                        <p class="mb-0">High Risk Subscribers</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-info">
+                    <div class="card-body text-center">
+                        <h3 class="text-info">
+                            {{ subscriber_analysis.values() | selectattr('balance_stability', 'equalto', 'volatile') | list | length }}
+                        </h3>
+                        <p class="mb-0">Volatile Balances</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h3 class="text-success">
+                            {{ (subscriber_analysis.values() | map(attribute='total_volume') | sum) | round(2) }}
+                        </h3>
+                        <p class="mb-0">Total Volume ($)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-table me-2"></i>Detailed Subscriber Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Subscriber ID</th>
+                                <th>Transactions</th>
+                                <th>Total Volume</th>
+                                <th>Avg Transaction</th>
+                                <th>Frequency</th>
+                                <th>Preferred Type</th>
+                                <th>Risk Score</th>
+                                <th>Balance Stability</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subscriber_id, analysis in subscriber_analysis.items() %}
+                            <tr>
+                                <td>
+                                    <strong>{{ subscriber_id }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ analysis.total_transactions }}</span>
+                                </td>
+                                <td>
+                                    ${{ "%.2f"|format(analysis.total_volume) }}
+                                </td>
+                                <td>
+                                    ${{ "%.2f"|format(analysis.avg_transaction_size) }}
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if analysis.transaction_frequency == 'daily' %}bg-success
+                                        {% elif analysis.transaction_frequency == 'weekly' %}bg-info
+                                        {% elif analysis.transaction_frequency == 'monthly' %}bg-warning
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ analysis.transaction_frequency.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ analysis.preferred_transaction_type.title() }}
+                                </td>
+                                <td>
+                                    <span class="fw-bold 
+                                        {% if analysis.risk_score >= 70 %}risk-high
+                                        {% elif analysis.risk_score >= 40 %}risk-medium
+                                        {% else %}risk-low{% endif %}">
+                                        {{ "%.1f"|format(analysis.risk_score) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold stability-{{ analysis.balance_stability }}">
+                                        {{ analysis.balance_stability.title() }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>High Risk Subscribers</h5>
+                    </div>
+                    <div class="card-body">
+                        {% set high_risk_subs = subscriber_analysis.items() | selectattr('1.risk_score', 'gt', 70) | list %}
+                        {% if high_risk_subs %}
+                            <div class="list-group">
+                                {% for subscriber_id, analysis in high_risk_subs %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ subscriber_id }}</h6>
+                                        <small class="text-danger fw-bold">Risk: {{ "%.1f"|format(analysis.risk_score) }}</small>
+                                    </div>
+                                    <p class="mb-1">
+                                        {{ analysis.total_transactions }} transactions, 
+                                        ${{ "%.2f"|format(analysis.total_volume) }} volume
+                                    </p>
+                                    <small>{{ analysis.balance_stability.title() }} balance stability</small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                No high-risk subscribers detected.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Top Subscribers by Volume</h5>
+                    </div>
+                    <div class="card-body">
+                        {% set top_subs = subscriber_analysis.items() | sort(attribute='1.total_volume', reverse=true) | list %}
+                        <div class="list-group">
+                            {% for subscriber_id, analysis in top_subs[:5] %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ subscriber_id }}</h6>
+                                    <small class="text-primary fw-bold">${{ "%.2f"|format(analysis.total_volume) }}</small>
+                                </div>
+                                <p class="mb-1">
+                                    {{ analysis.total_transactions }} transactions 
+                                    ({{ analysis.transaction_frequency }})
+                                </p>
+                                <small>Avg: ${{ "%.2f"|format(analysis.avg_transaction_size) }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Analysis Legend</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6>Risk Score</h6>
+                                <ul class="list-unstyled">
+                                    <li><span class="risk-low">●</span> Low Risk: 0-39</li>
+                                    <li><span class="risk-medium">●</span> Medium Risk: 40-69</li>
+                                    <li><span class="risk-high">●</span> High Risk: 70-100</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Balance Stability</h6>
+                                <ul class="list-unstyled">
+                                    <li><span class="stability-stable">●</span> Stable: Low volatility</li>
+                                    <li><span class="stability-moderate">●</span> Moderate: Medium volatility</li>
+                                    <li><span class="stability-volatile">●</span> Volatile: High volatility</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Transaction Frequency</h6>
+                                <ul class="list-unstyled">
+                                    <li><span class="badge bg-success">Daily</span> 1+ per day</li>
+                                    <li><span class="badge bg-info">Weekly</span> 1+ per week</li>
+                                    <li><span class="badge bg-warning">Monthly</span> Less frequent</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

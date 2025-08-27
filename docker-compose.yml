@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  calo-analyzer:
+    build: .
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+    environment:
+      - FLASK_ENV=production
+      - PYTHONPATH=/app/src:/app
+    restart: unless-stopped
+    
+  # Optional: Add a volume for persistent data
+volumes:
+  analyzer-data:
+    driver: local

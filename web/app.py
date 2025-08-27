@@ -43,11 +43,14 @@ def to_json_filter(obj):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize components
+# Initialize components with absolute paths
 log_parser = LogParser()
 balance_tracker = BalanceTracker()
 analyzer = DataAnalyzer()
-report_generator = ReportGenerator()
+
+# Use absolute path for reports
+reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'reports')
+report_generator = ReportGenerator(reports_dir)
 
 # Global variables to store analysis results
 current_data = {}

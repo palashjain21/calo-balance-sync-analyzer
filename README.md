@@ -53,7 +53,7 @@ A comprehensive data engineering solution for analyzing AWS Lambda balance sync 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd Calo_DE_project
+   cd calo-balance-sync-analyzer
    ```
 
 2. **Start the application**
